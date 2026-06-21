@@ -79,6 +79,10 @@ function showDetails(type, trackId=null){
     title = `تفاصيل مسار ${t?.name || trackId}`;
     subtitle = "كل عناصر المسار";
     items = state.items.filter(i=>i.track===trackId);
+  }else if(type === "dependent"){
+    title = "تفاصيل المهام الاعتمادية";
+    subtitle = trackId ? "مهام المسار المحدد التي تعتمد على مهام أخرى" : "جميع المهام التي تعتمد على مهام أخرى على مستوى المشروع";
+    items = state.items.filter(i=>i.dependsOn && String(i.dependsOn).trim()!=="" && (!trackId || i.track===trackId));
   }
 
   // لوحة التفاصيل: تُنشأ ديناميكيًا إذا لم تكن موجودة في الصفحة (حماية كاملة).
@@ -87,7 +91,9 @@ function showDetails(type, trackId=null){
   if(modal.title) modal.title.textContent = title;
   if(modal.subtitle) modal.subtitle.textContent = subtitle;
   if(modal.count) modal.count.textContent = `${items.length} عنصر`;
-  if(modal.list) modal.list.innerHTML = items.length ? items.map(i=>`
+  if(modal.list) modal.list.innerHTML = items.length ? items.map(i=>{
+    const depLine = i.dependsOn && String(i.dependsOn).trim()!=="" ? `<p style="margin:2px 0"><b>تعتمد على:</b> ${String(i.dependsOn).split(",").map(s=>s.trim()).filter(Boolean).map(id=>{ const p=itemById(id); return p ? `${escH(p.title)} <span class="${colorByStatus(p.status)}">(${escH(p.status)})</span>` : escH(id); }).join("، ")}</p>` : "";
+    return `
     <div class="detail-item-card" style="background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:12px 14px;margin-bottom:10px">
       <h4 style="margin:0 0 6px;color:#E8C96A">${escH(i.title)}</h4>
       <p style="margin:2px 0"><b>المسار:</b> ${escH(i.track)}</p>
@@ -95,8 +101,9 @@ function showDetails(type, trackId=null){
       <p style="margin:2px 0"><b>المسؤول:</b> ${escH(i.owner) || "-"}</p>
       <p style="margin:2px 0"><b>الحالة:</b> <span class="${colorByStatus(i.status)}">${escH(i.status) || "-"}</span></p>
       <p style="margin:2px 0"><b>الاستحقاق:</b> ${escH(i.due) || "-"}</p>
+      ${depLine}
     </div>
-  `).join("") : `<div class="hint">لا توجد عناصر مطابقة.</div>`;
+  `;}).join("") : `<div class="hint">لا توجد عناصر مطابقة.</div>`;
   modal.overlay.style.display = "flex";
 }
 // ينشئ نافذة التفاصيل مرة واحدة ويعيد مراجع عناصرها (أو يستخدم عناصر HTML إن وُجدت)
@@ -682,7 +689,7 @@ function renderKpis(){
     ["amber",k.active,"مهام نشطة","tasks"],
     ["gray",k.notStarted,"لم تبدأ","tasks"],
     ["red",k.risk,"مخاطر مفتوحة","risks"],
-    ["purple",k.dependentTasks,"مهام اعتمادية","tasks"],
+    ["purple",k.dependentTasks,"مهام اعتمادية","dependent"],
     ["sand",k.overall+"%","الإنجاز العام","track"],
     ["cyan",readiness+"%","جاهزية الافتتاح","milestones"]
   ].map(x=>`<article class="kpi glass ${x[0]} clickable-kpi" onclick="showDetails('${x[3]}')"><h3>${x[1]}</h3><small>${x[2]}</small></article>`).join("");
