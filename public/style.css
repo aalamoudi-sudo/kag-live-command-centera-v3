@@ -2794,10 +2794,16 @@ footer{display:none!important;}
 .cross-track-targets{display:flex;flex-wrap:wrap;gap:8px;flex:1}
 .cross-track-chip{display:inline-block;padding:6px 12px;border-radius:7px;background:rgba(193,124,255,.14);border:1px solid rgba(193,124,255,.42);color:#D8B4FF;font-size:15px;font-weight:900}
 .cross-track-chip b{color:#fff}
+.cross-track-chip.intra-chip{background:rgba(159,176,195,.12);border-color:rgba(159,176,195,.35);color:#C8D2DC}
 .cross-track-empty{color:var(--muted);font-size:17px;line-height:1.8;margin:0}
 @media(max-width:780px){.cross-track-row{flex-direction:column;align-items:flex-start}}
 .home-tracks-grid .cross-track-panel{display:flex;flex-direction:column;justify-content:center;min-height:200px}
 .home-tracks-grid .cross-track-panel .cross-track-list{justify-content:center}
+.cross-track-summary{display:flex;flex-wrap:wrap;gap:8px 18px;margin:-6px 0 14px;padding-bottom:12px;border-bottom:1px solid rgba(193,124,255,.18)}
+.cross-track-stat{font-size:15px;color:var(--text);font-weight:900}
+.cross-track-stat b{color:#D8B4FF}
+.cross-track-stat.muted{color:var(--muted);font-weight:700;font-size:14px}
+.cross-track-stat.muted b{color:var(--sand)}
 
 /* ============ ألوان إضافية لخانات KPI ============ */
 .kpi.gray{color:#9ab8c1}

@@ -365,27 +365,55 @@ function crossTrackDependencyMatrix(){
   });
   return matrix;
 }
+function intraTrackDependencyCounts(){
+  // لكل مسار: عدد المهام التي تعتمد على مهمة أخرى من نفس المسار
+  const counts = {};
+  (state.items||[]).forEach(me=>{
+    if(!me.dependsOn) return;
+    me.dependsOn.split(",").map(s=>s.trim()).filter(Boolean).forEach(depId=>{
+      const pred = itemById(depId);
+      if(!pred || !pred.track || pred.track!==me.track) return; // نحسب فقط الاعتماديات الداخلية لنفس المسار
+      counts[me.track] = counts[me.track] || new Set();
+      counts[me.track].add(me.id || `${me.track}:${me.title}`);
+    });
+  });
+  const out = {};
+  Object.keys(counts).forEach(k=>{ out[k] = counts[k].size; });
+  return out;
+}
 function crossTrackDependencyHtml(){
   const matrix = crossTrackDependencyMatrix();
+  const intra = intraTrackDependencyCounts();
   const trackName = id => { const t=(state.tracks||[]).find(x=>x.id===id); return t ? t.name : ""; };
-  const fromIds = Object.keys(matrix);
-  const totalLinks = fromIds.reduce((s,id)=>s+Object.values(matrix[id]).reduce((a,b)=>a+b,0),0);
-  if(!totalLinks){
-    return `<div class="glass panel cross-track-panel">
-      <div class="panel-title"><b></b><h3>🔗 الاعتماديات بين المسارات</h3></div>
-      <p class="cross-track-empty">لا توجد حالياً مهام تعتمد على مهام من مسار آخر — كل الاعتماديات المسجلة بالشيت داخلية ضمن كل مسار لحاله.</p>
-    </div>`;
-  }
+  // عدد المهام الفريدة (مو الروابط) التي لها اعتمادية خارجية واحدة على الأقل — لنفس منهجية عدّ الداخلية، حتى يتطابق المجموعان منطقياً
+  const crossItemIds = new Set();
+  (state.items||[]).forEach(me=>{
+    if(!me.dependsOn) return;
+    me.dependsOn.split(",").map(s=>s.trim()).filter(Boolean).forEach(depId=>{
+      const pred = itemById(depId);
+      if(pred && pred.track && pred.track!==me.track) crossItemIds.add(me.id || `${me.track}:${me.title}`);
+    });
+  });
+  const totalCrossItems = crossItemIds.size;
+  const totalIntraItems = Object.values(intra).reduce((a,b)=>a+b,0);
+  const totalDependentItems = (state.items||[]).filter(i=>i.dependsOn && String(i.dependsOn).trim()!=="").length;
+  const overlap = Math.max(0, totalCrossItems + totalIntraItems - totalDependentItems);
   const rows = (state.tracks||[]).map(t=>{
     const targets = matrix[t.id];
-    if(!targets) return "";
-    const chips = Object.entries(targets).sort((a,b)=>b[1]-a[1]).map(([toId,count])=>
+    const intraCount = intra[t.id] || 0;
+    const chips = targets ? Object.entries(targets).sort((a,b)=>b[1]-a[1]).map(([toId,count])=>
       `<span class="cross-track-chip"><b>${count}</b> ${count===1?"مهمة مرتبطة":"مهام مرتبطة"} بمسار <b>${escH(toId)}</b> · ${escH(trackName(toId))}</span>`
-    ).join("");
-    return `<div class="cross-track-row"><div class="cross-track-from">مسار ${escH(t.id)} <small>${escH(t.name)}</small></div><div class="cross-track-targets">${chips}</div></div>`;
+    ).join("") : "";
+    const intraChip = `<span class="cross-track-chip intra-chip"><b>${intraCount}</b> ${intraCount===1?"اعتمادية داخلية":"اعتماديات داخلية"} (ضمن المسار نفسه)</span>`;
+    return `<div class="cross-track-row"><div class="cross-track-from">مسار ${escH(t.id)} <small>${escH(t.name)}</small></div><div class="cross-track-targets">${intraChip}${chips}</div></div>`;
   }).join("");
   return `<div class="glass panel cross-track-panel">
-    <div class="panel-title"><b></b><h3>🔗 الاعتماديات بين المسارات (${totalLinks})</h3></div>
+    <div class="panel-title"><b></b><h3>🔗 مصفوفة الترابط بين المسارات</h3></div>
+    <div class="cross-track-summary">
+      <span class="cross-track-stat"><b>${totalCrossItems}</b> مهمة لها اعتماد خارجي (بين المسارات)</span>
+      <span class="cross-track-stat"><b>${totalIntraItems}</b> مهمة لها اعتماد داخلي (ضمن نفس المسار)</span>
+      <span class="cross-track-stat muted">من إجمالي <b>${totalDependentItems}</b> مهمة اعتمادية${overlap?` (${overlap} منها لها النوعان معاً)`:""}</span>
+    </div>
     <div class="cross-track-list">${rows}</div>
   </div>`;
 }
